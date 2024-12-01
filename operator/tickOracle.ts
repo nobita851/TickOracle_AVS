@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 dotenv.config();
 
+const { getPrice } = require('./price.js');
+
 // Check if the process.env object is empty
 if (!Object.keys(process.env).length) {
     throw new Error("process.env object is empty");
@@ -18,7 +20,6 @@ let chainId = 31337;
 const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../contracts/deployments/hello-world/${chainId}.json`), 'utf8'));
 // Load core deployment data
 const coreDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../contracts/deployments/core/${chainId}.json`), 'utf8'));
-
 
 const delegationManagerAddress = coreDeploymentData.addresses.delegation; // todo: reminder to fix the naming of this contract in the deployment file, change to delegationManager
 const avsDirectoryAddress = coreDeploymentData.addresses.avsDirectory;
@@ -37,6 +38,47 @@ const tickOracleServiceManager = new ethers.Contract(tickOracleServiceManagerAdd
 const ecdsaRegistryContract = new ethers.Contract(ecdsaStakeRegistryAddress, ecdsaRegistryABI, wallet);
 const avsDirectory = new ethers.Contract(avsDirectoryAddress, avsDirectoryABI, wallet);
 
+const ERC20ABI = [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "decimals",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint8"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "spender",
+          "type": "address"
+        },
+        {
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "approve",
+      "outputs": [
+        {
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+];  
+
+
 /// HOOKATHON: Update the function
 const signAndRespondToTask = async (taskIndex: number) => {
     /// HOOKATHON: Update the message for signature ?
@@ -49,6 +91,35 @@ const signAndRespondToTask = async (taskIndex: number) => {
 
     const operators = [await wallet.getAddress()];
     const signatures = [signature];
+
+    /// HOOKATHON: Update the symbols for the tokens
+    const symbol0 = 'USDCUSDT';
+    const symbol1 = 'ETHUSDT';
+
+    const token0Address = avsDeploymentData.addresses.token0;
+    const token1Address = avsDeploymentData.addresses.token1;
+
+    const price0 = await getPrice(symbol0);
+    const price1 = await getPrice(symbol1);
+
+    const token0 = new ethers.Contract(token0Address, ERC20ABI, wallet);
+    const token1 = new ethers.Contract(token1Address, ERC20ABI, wallet);
+
+    // assuming decimals to even number
+    const decimals0 = await token0.decimals();
+    const decimals1 = await token1.decimals();
+    const multiplier = (decimals0 - decimals1) / 2 - 18;
+    
+    var sqrtPriceX96;
+    if(multiplier > 0)
+        sqrtPriceX96 = ethers.parseEther(`${Math.sqrt(price0 / price1)}`) * (2n ** 96n) * (10n ** BigInt(multiplier));
+    else
+        sqrtPriceX96 = ethers.parseEther(`${Math.sqrt(price0 / price1)}`) * (2n ** 96n) / (10n ** BigInt(-multiplier));
+
+    const currentTick = Math.floor((Math.log(price0) - Math.log(price1) + Math.log(10) * (decimals1 - decimals0)) / Math.log(1.0001));
+    // +- 5% price range
+    const tickUpper = currentTick + 488;
+    const tickLower = currentTick - 488;
 
     /// HOOKATHON: Update the ABI encoding ?
     const signedTask = ethers.AbiCoder.defaultAbiCoder().encode(
