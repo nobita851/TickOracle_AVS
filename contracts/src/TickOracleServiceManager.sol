@@ -15,6 +15,17 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {PoolKey, IPoolManager} from "./IPoolManager.sol";
 
+interface IERC20 {
+    function approve(
+        address spender,
+        uint256 amount
+    ) external returns (bool);
+
+    function balanceOf(
+        address account
+    ) external view returns (uint256);
+}
+
 /**
  * @title Primary entrypoint for procuring services from TickOracle.
  * @author Eigen Labs, Inc.
@@ -23,6 +34,8 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
     using ECDSAUpgradeable for bytes32;
 
     IPoolManager public poolManager;
+    IERC20 public token0;
+    IERC20 public token1;
 
     uint32 public latestTaskNum;
 
@@ -48,7 +61,9 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
         address _stakeRegistry,
         address _rewardsCoordinator,
         address _delegationManager,
-        address _poolManager
+        address _poolManager,
+        address _token0,
+        address _token1
     )
         ECDSAServiceManagerBase(
             _avsDirectory,
@@ -58,6 +73,8 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
         )
     {
         poolManager = IPoolManager(_poolManager);
+        token0 = IERC20(_token0);
+        token1 = IERC20(_token1);
     }
 
     /* FUNCTIONS */
@@ -97,6 +114,15 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
             revert();
         }
 
+        // approve tokens for poolManager
+        // assuming the tokens are held by the contract
+        if (swapParams.zeroForOne) {
+            swapParams.amountSpecified = token0.balanceOf(address(this));
+            token0.approve(address(poolManager), swapParams.amountSpecified);
+        } else {
+            swapParams.amountSpecified = token1.balanceOf(address(this));
+            token1.approve(address(poolManager), swapParams.amountSpecified);
+        }
         poolManager.swap(key, swapParams, hookData);
 
         // updating the storage with task responses
