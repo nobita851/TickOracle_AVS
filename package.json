@@ -7,7 +7,7 @@
     "start:tick-operator": "ts-node operator/tickOracle.ts",
     "start:traffic": "ts-node operator/createNewTasks.ts",
     "start:tick-traffic": "ts-node operator/createTaskForTickOracle.ts",
-    "start:anvil": "anvil",
+    "start:anvil": "anvil --fork-url https://eth-sepolia.api.onfinality.io/public",
     "deploy:core": "cd contracts && forge script script/DeployEigenLayerCore.s.sol --rpc-url http://localhost:8545 --broadcast",
     "deploy:tick-oracle": "cd contracts && forge script script/TickOracleDeployer.s.sol --rpc-url http://localhost:8545 --broadcast",
     "deploy:hello-world": "cd contracts && forge script script/HelloWorldDeployer.s.sol --rpc-url http://localhost:8545 --broadcast",

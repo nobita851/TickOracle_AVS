@@ -14,6 +14,7 @@ import {Quorum} from "@eigenlayer-middleware/src/interfaces/IECDSAStakeRegistryE
 import {UpgradeableProxyLib} from "./UpgradeableProxyLib.sol";
 import {CoreDeploymentLib} from "./CoreDeploymentLib.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {ERC20Mock} from "../../test/ERC20Mock.sol";
 
 library TickOracleDeploymentLib {
     using stdJson for *;
@@ -36,6 +37,10 @@ library TickOracleDeploymentLib {
         Quorum memory quorum
     ) internal returns (DeploymentData memory) {
         DeploymentData memory result;
+
+        // Deploy mock tokens
+        // address usdcMock = address(new ERC20Mock());
+        // address usdtMock = address(new ERC20Mock());
 
         // First, deploy upgradeable proxy contracts that will point to the implementations.
         result.tickOracleServiceManager = UpgradeableProxyLib.setUpEmptyProxy(
