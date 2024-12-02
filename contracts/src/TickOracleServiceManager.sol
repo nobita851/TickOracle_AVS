@@ -15,16 +15,16 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {PoolKey, IPoolManager} from "./IPoolManager.sol";
 
-interface IERC20 {
-    function approve(
-        address spender,
-        uint256 amount
-    ) external returns (bool);
+// interface IERC20 {
+//     function approve(
+//         address spender,
+//         uint256 amount
+//     ) external returns (bool);
 
-    function balanceOf(
-        address account
-    ) external view returns (uint256);
-}
+//     function balanceOf(
+//         address account
+//     ) external view returns (uint256);
+// }
 
 /**
  * @title Primary entrypoint for procuring services from TickOracle.
@@ -117,11 +117,9 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
         // approve tokens for poolManager
         // assuming the tokens are held by the contract
         if (swapParams.zeroForOne) {
-            swapParams.amountSpecified = token0.balanceOf(address(this));
-            token0.approve(address(poolManager), swapParams.amountSpecified);
+            token0.approve(address(poolManager), uint256(swapParams.amountSpecified));
         } else {
-            swapParams.amountSpecified = token1.balanceOf(address(this));
-            token1.approve(address(poolManager), swapParams.amountSpecified);
+            token1.approve(address(poolManager), uint256(swapParams.amountSpecified));
         }
         poolManager.swap(key, swapParams, hookData);
 
