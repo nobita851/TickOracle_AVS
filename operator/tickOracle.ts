@@ -116,24 +116,36 @@ const signAndRespondToTask = async (taskIndex: number) => {
     else
         sqrtPriceX96 = ethers.parseEther(`${Math.sqrt(price0 / price1)}`) * (2n ** 96n) / (10n ** BigInt(-multiplier));
 
-    const currentTick = Math.floor((Math.log(price0) - Math.log(price1) + Math.log(10) * (decimals1 - decimals0)) / Math.log(1.0001));
+    const calculatedCurrentTick = Math.floor((Math.log(price0) - Math.log(price1) + Math.log(10) * (decimals1 - decimals0)) / Math.log(1.0001));
     // +- 5% price range
-    const tickUpper = currentTick + 488;
-    const tickLower = currentTick - 488;
+    const tickUpper = calculatedCurrentTick + 500;
+    const tickLower = calculatedCurrentTick - 500;
+
+    /// HOOKATHON: const currentTickOnPool = How to read from pool manager contract ?;
 
     /// HOOKATHON: Update the ABI encoding ?
-    const signedTask = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address[]", "bytes[]", "uint32"],
-        [operators, signatures, ethers.toBigInt(await provider.getBlockNumber()-1)]
-    );
+    // const signedTask = ethers.AbiCoder.defaultAbiCoder().encode(
+    //     ["address[]", "bytes[]", "uint32"],
+    //     [operators, signatures, ethers.toBigInt(await provider.getBlockNumber()-1)]
+    // );
 
     /// HOOKATHON: Implement the respondToTask function
     const tx = await tickOracleServiceManager.respondToTask(
-        {}, // poolKey
-        {}, // swapParams
-        ``, // hookData: abi.encode(tickLower, tickUpper)
+        {
+            currency0: token0Address,
+            currency1: token1Address,
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: ethers.ZeroAddress
+        }, // poolKey
+        {
+            zeroForOne: true, /// HOOKATHON: Update the value currentTickOnPool > calculatedCurrentTick ? true : false
+            amountSpecified: -ethers.parseEther("0.00001"),
+            sqrtPriceX96: sqrtPriceX96
+        }, // swapParams
+        ethers.AbiCoder.defaultAbiCoder().encode(["int24", "int24"],[tickLower, tickUpper]),
         taskIndex,
-        signedTask
+        ""
     );
     await tx.wait();
     console.log(`Responded to task.`);
