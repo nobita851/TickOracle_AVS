@@ -81,10 +81,6 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
     // NOTE: this function creates new task, assigns it a taskId
     function createNewTask(
     ) public {
-        // NOTE: creates new task only if the previous task was created 5 blocks ago
-        if (allTaskBlocks[latestTaskNum] + 5 < block.number) {
-            return;
-        }
         latestTaskNum = latestTaskNum + 1;
         emit NewTaskCreated(latestTaskNum);
     }
@@ -106,13 +102,14 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
             "Operator has already responded to the task"
         );
 
+        /// HOOKATHON: Removed signature verification for now
         // The message that was signed
-        bytes32 messageHash = keccak256(abi.encode(key, swapParams, hookData));
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-        bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
-        if (!(magicValue == ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash,signature))){
-            revert();
-        }
+        // bytes32 messageHash = keccak256(abi.encode(key, swapParams, hookData));
+        // bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
+        // bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
+        // if (!(magicValue == ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash,signature))){
+        //     revert();
+        // }
 
         // approve tokens for poolManager
         // assuming the tokens are held by the contract
@@ -129,6 +126,6 @@ contract TickOracleServiceManager is ECDSAServiceManagerBase, ITickOracleService
         // emitting event
         emit TaskResponded(referenceTaskIndex, msg.sender);
 
-        createNewTask();
+        // createNewTask();
     }
 }
